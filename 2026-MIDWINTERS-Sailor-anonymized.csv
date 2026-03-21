@@ -1,0 +1,5 @@
+"Sailor Name","Sailor Country","Sailor Country Code","Sailor Email","Sail Number","Boat Name",Division,"Sail Size","Sail Colour","Tramp Colour","Hull Colour","Emergency Contact Name","Emergency Contact Number","Yacht Club","Federation / MNA #","Vakaros ID","Medical Conditions",Measurement,Paid,Insurance,"Mobile Number"
+"James Carter","United States",USA,james.carter@example.com,4017,Windchaser,"Super Master (50+)",8.2,Red,Blue,White,"Laura Carter",'5551234567,LBYC,,,,No,Unpaid,2026-12-04,'5559876543
+"Ethan Brooks",Canada,CAN,ethan.brooks@example.com,2451,,"Youth (U21)",7.5,,,,"Sandra Brooks",'5552345678,"NA Waszp Team/GPYC",,022800621C,,No,"Paid via RaceHub",,'+15553456789
+"Liam Fischer",Canada,CAN,liam.fischer@example.com,3198,,"Junior (U19)",7.5,,,,"Marie Fischer",'5553456701,NAU21/HPSC,,0228005AA4,,No,"Paid via RaceHub",2025-12-01,'5554567890
+"Tyler Carter","United States",USA,tyler.carter@example.com,2763,,Master,8.2,,,,"James Carter",'555-456-7891,LBYC,,,,No,Unpaid,,'
