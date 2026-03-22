@@ -42,4 +42,11 @@ jobs:
           actionlint-only-install: true
 
       - name: Tests (pytest — includes lint, type-check, and actionlint)
-        run: uv run pytest --cov=waszp_gp_scorer --cov-report=term-missing
+        run: uv run pytest --cov=waszp_gp_scorer --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
