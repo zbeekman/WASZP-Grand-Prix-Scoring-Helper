@@ -33,6 +33,7 @@ from waszp_gp_scorer.scorer import (
     ExcessRoundingsWarning,
     FinishOnlyWarning,
     LeadBoatViolationWarning,
+    MissingFinishWindowMarkerWarning,
     NoRecordedFinishWarning,
     ScorerWarning,
     score,
@@ -97,6 +98,45 @@ def _session(
         green_fleet=green_fleet or set(),
         gate_roundings=gate_roundings,
         finish_entries=finish_entries,
+    )
+
+
+def _session_sep_pin(
+    *,
+    num_laps: int = 2,
+    gate_sns: list[str],
+    finish_sns: list[tuple[str, str | None]],
+    marker_after: int | None = None,
+    competitors: list[Competitor] | None = None,
+) -> RaceSession:
+    """Build a SEPARATE_PIN :class:`RaceSession` from compact inputs.
+
+    Args:
+        num_laps: Required number of laps.
+        gate_sns: Sail numbers in gate recording order.
+        finish_sns: Sequence of ``(sail_number, letter_score_or_None)`` tuples.
+        marker_after: 0-based index of the last pre-window gate rounding
+            (``finish_window_marker_position``).  ``None`` = no marker placed.
+        competitors: Explicit competitor list; auto-generated if ``None``.
+    """
+    gate_roundings = [
+        GateRounding(position=i + 1, sail_number=sn) for i, sn in enumerate(gate_sns)
+    ]
+    finish_entries = [
+        FinishEntry(position=i + 1, sail_number=sn, letter_score=ls)
+        for i, (sn, ls) in enumerate(finish_sns)
+    ]
+    if competitors is None:
+        all_sns = {sn for sn in gate_sns} | {sn for sn, _ in finish_sns}
+        competitors = [_competitor(sn) for sn in sorted(all_sns)]
+    return RaceSession(
+        num_laps=num_laps,
+        finish_line_config=FinishLineConfig.SEPARATE_PIN,
+        competitors=competitors,
+        green_fleet=set(),
+        gate_roundings=gate_roundings,
+        finish_entries=finish_entries,
+        finish_window_marker_position=marker_after,
     )
 
 
@@ -1145,3 +1185,230 @@ class TestRMGExample1:
             "2798 should be 3rd in GP ranking (2186 at finish pos 3 is "
             "demoted to 1-lap tier)"
         )
+
+
+# ---------------------------------------------------------------------------
+# SEPARATE_PIN config — lap formula & classification
+# ---------------------------------------------------------------------------
+
+
+class TestSeparatePinLapFormula:
+    """SEPARATE_PIN: laps = gate_roundings (no finish-crossing bonus)."""
+
+    def test_gp_laps_equals_gate_count(self) -> None:
+        """GP boat laps = gate_roundings, not gate_roundings + 1."""
+        # 2-lap SEPARATE_PIN; boat G rounds gate once and finishes
+        # Under FINISH_AT_GATE it would get 2 laps (1+1). Under SEPARATE_PIN: 1.
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["G"],
+            finish_sns=[("G", None)],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        laps = {r.competitor.sail_number: r.laps for r in results}
+        assert laps["G"] == 1
+
+    def test_gp_classified_as_gp(self) -> None:
+        """Boat with fewer gate roundings + finish → FinishType.GP."""
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["G"],
+            finish_sns=[("G", None)],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        types = _types(results)
+        assert types["G"] == FinishType.GP
+
+    def test_standard_requires_full_gate_roundings_plus_finish(self) -> None:
+        """Standard = required_laps gate roundings + on finish list."""
+        # 2-lap race: need 2 gate roundings + finish for Standard
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["S", "S"],
+            finish_sns=[("S", None)],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        types = _types(results)
+        laps = {r.competitor.sail_number: r.laps for r in results}
+        assert types["S"] == FinishType.STANDARD
+        assert laps["S"] == 2
+
+    def test_window_phase_rounding_counts_toward_laps(self) -> None:
+        """1 pre-window + 1 window-phase rounding = 2 laps total."""
+        # 2-lap SEPARATE_PIN; G rounds gate twice with window after first rounding
+        # marker_after=0 means gate_roundings[0] is pre-window, [1] is window-phase
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["G", "G"],
+            finish_sns=[],
+            marker_after=0,
+        )
+        results, _ = score(session)
+        laps = {r.competitor.sail_number: r.laps for r in results}
+        assert laps["G"] == 2  # both roundings count regardless of window phase
+
+
+# ---------------------------------------------------------------------------
+# SEPARATE_PIN config — tier ordering
+# ---------------------------------------------------------------------------
+
+
+class TestSeparatePinTierOrdering:
+    """SEPARATE_PIN: pre-window Gate < line-crossers < window-phase Gate."""
+
+    def test_pre_window_gate_ahead_of_gp_same_tier(self) -> None:
+        """Pre-window Gate boat ranks ahead of GP boat in same lap-count tier."""
+        # 2-lap race; marker after index 1 (both roundings are pre-window)
+        # GateB: 1 rounding at idx 0 (pre-window), no finish → Gate, 1 lap
+        # GP_A:  1 rounding at idx 1 (pre-window) + finish → GP, 1 lap
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["GateB", "GP_A"],
+            finish_sns=[("GP_A", None)],
+            marker_after=1,  # both roundings are pre-window
+        )
+        results, _ = score(session)
+        places = _places(results)
+        assert (
+            places["GateB"] < places["GP_A"]
+        ), "Pre-window Gate GateB must rank ahead of GP GP_A in same tier"
+
+    def test_window_phase_gate_behind_gp_same_tier(self) -> None:
+        """Window-phase Gate boat ranks behind GP boat in same lap-count tier."""
+        # 2-lap race; marker after index 0
+        # GP_A:  1 rounding at idx 0 (pre-window) + finish → GP, 1 lap
+        # GateW: 1 rounding at idx 1 (window-phase), no finish → Gate, 1 lap
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["GP_A", "GateW"],
+            finish_sns=[("GP_A", None)],
+            marker_after=0,
+        )
+        results, _ = score(session)
+        places = _places(results)
+        assert (
+            places["GP_A"] < places["GateW"]
+        ), "GP GP_A must rank ahead of window-phase Gate GateW in same tier"
+
+    def test_full_ordering_in_one_tier(self) -> None:
+        """Within a 1-lap tier: pre-window Gate < GP < window-phase Gate."""
+        # gate log: [PreGate(idx 0), GP_A(idx 1), WinGate(idx 2)]
+        # marker_after=0 → idx 0 pre-window; idx 1, 2 window-phase
+        # PreGate: Gate, pre-window → first
+        # GP_A:    GP (line-crosser) → second
+        # WinGate: Gate, window-phase → third
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["PreGate", "GP_A", "WinGate"],
+            finish_sns=[("GP_A", None)],
+            marker_after=0,
+        )
+        results, _ = score(session)
+        places = _places(results)
+        assert places["PreGate"] < places["GP_A"] < places["WinGate"]
+
+
+# ---------------------------------------------------------------------------
+# SEPARATE_PIN config — Error: No Recorded Finish
+# ---------------------------------------------------------------------------
+
+
+class TestSeparatePinNRF:
+    """SEPARATE_PIN: required_laps gate roundings + no finish → ERROR_NRF."""
+
+    def test_nrf_classified_as_error_no_recorded_finish(self) -> None:
+        """Boat with required_laps roundings and no finish → ERROR_NRF."""
+        # 2-lap race: 2 gate roundings = gate_cap; not on finish list
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["A", "A"],
+            finish_sns=[],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        types = _types(results)
+        assert types["A"] == FinishType.ERROR_NO_RECORDED_FINISH
+
+    def test_nrf_warning_issued_for_separate_pin(self) -> None:
+        """NoRecordedFinishWarning returned for SEPARATE_PIN NRF boat."""
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["A", "A"],
+            finish_sns=[],
+            marker_after=None,
+        )
+        _, warnings = score(session)
+        nrf = [w for w in warnings if isinstance(w, NoRecordedFinishWarning)]
+        assert len(nrf) == 1
+        assert nrf[0].sail_number == "A"
+        assert nrf[0].gate_count == 2
+
+    def test_gate_boat_below_cap_not_nrf(self) -> None:
+        """Gate boat with fewer than required_laps roundings → Gate, no NRF."""
+        # 3-lap race: gate_cap = 3; boat with 2 roundings → Gate, not NRF
+        session = _session_sep_pin(
+            num_laps=3,
+            gate_sns=["A", "A"],
+            finish_sns=[],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        types = _types(results)
+        laps = {r.competitor.sail_number: r.laps for r in results}
+        assert types["A"] == FinishType.GATE
+        assert laps["A"] == 2
+
+
+# ---------------------------------------------------------------------------
+# SEPARATE_PIN config — missing finish window marker
+# ---------------------------------------------------------------------------
+
+
+class TestSeparatePinMissingMarker:
+    """SEPARATE_PIN with no marker: warning returned, all roundings pre-window."""
+
+    def test_missing_marker_warning_returned(self) -> None:
+        """MissingFinishWindowMarkerWarning issued when no marker placed."""
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["A", "A"],
+            finish_sns=[("A", None)],
+            marker_after=None,
+        )
+        _, warnings = score(session)
+        mm = [w for w in warnings if isinstance(w, MissingFinishWindowMarkerWarning)]
+        assert len(mm) == 1
+
+    def test_scoring_runs_with_missing_marker(self) -> None:
+        """Scoring completes normally even with no marker; all roundings pre-window."""
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["A", "B"],
+            finish_sns=[("A", None), ("B", None)],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        # Both boats have 1 rounding (pre-window) + finish → GP, 1 lap each
+        types = _types(results)
+        assert types["A"] == FinishType.GP
+        assert types["B"] == FinishType.GP
+
+    def test_all_roundings_treated_as_pre_window_when_no_marker(self) -> None:
+        """Without marker, Gate boats are all pre-window (rank before GP)."""
+        # GateX: 1 rounding + no finish → Gate, 1 lap (treated as pre-window)
+        # GP_Y:  1 rounding + finish → GP, 1 lap
+        # Pre-window Gate ranks ahead of GP
+        session = _session_sep_pin(
+            num_laps=2,
+            gate_sns=["GateX", "GP_Y"],
+            finish_sns=[("GP_Y", None)],
+            marker_after=None,
+        )
+        results, _ = score(session)
+        places = _places(results)
+        assert (
+            places["GateX"] < places["GP_Y"]
+        ), "Without marker, Gate (pre-window) must rank ahead of GP"

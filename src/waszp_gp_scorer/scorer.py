@@ -90,12 +90,23 @@ class LeadBoatViolationWarning:
     required_laps: int
 
 
+@dataclass(frozen=True)
+class MissingFinishWindowMarkerWarning:
+    """``SEPARATE_PIN`` race scored without a Finishing Window Opened marker.
+
+    When no marker has been placed (``finish_window_marker_position`` is
+    ``None``) all gate roundings are treated as pre-window roundings and
+    scoring proceeds normally.
+    """
+
+
 #: Union type alias for all warning types returned by :func:`score`.
 ScorerWarning = Union[
     ExcessRoundingsWarning,
     NoRecordedFinishWarning,
     FinishOnlyWarning,
     LeadBoatViolationWarning,
+    MissingFinishWindowMarkerWarning,
 ]
 
 # Letter scores that trigger Gate reclassification when boat is also on gate list
@@ -130,6 +141,8 @@ def score(
     """
     if session.finish_line_config == FinishLineConfig.FINISH_AT_GATE:
         return _score_finish_at_gate(session)
+    if session.finish_line_config == FinishLineConfig.SEPARATE_PIN:
+        return _score_separate_pin(session)
     raise NotImplementedError(
         f"Scoring for finish_line_config={session.finish_line_config!r} "
         "is not yet implemented."
@@ -156,6 +169,9 @@ class _BoatScore:
     #: Per-lap sequence position of the last gate rounding; ``None`` if no
     #: gate roundings exist (e.g. Finish Only boats).
     last_lap_seq_pos: Optional[int]
+    #: ``True`` if this Gate boat's last counted rounding was during the
+    #: finishing window (``SEPARATE_PIN`` only; always ``False`` otherwise).
+    is_window_phase: bool = False
 
 
 def _make_placeholder_competitor(sail_number: str) -> Competitor:
@@ -424,6 +440,297 @@ def _score_finish_at_gate(
                 continue
             # For non-8.2 check, skip boats not in the competitor list
             # (unknown rig size → cannot classify fleet).
+            if (
+                fleet_label == "non-8.2"
+                and finish_entry.sail_number not in competitor_map
+            ):
+                continue
+            in_fleet = (
+                finish_entry.sail_number in eight_two_sails
+                if fleet_label == "8.2"
+                else finish_entry.sail_number not in eight_two_sails
+            )
+            if in_fleet:
+                first_sn = finish_entry.sail_number
+                break
+
+        if first_sn is not None:
+            boat_laps = laps_by_sail.get(first_sn, 0)
+            if boat_laps < required_laps:
+                warnings.append(
+                    LeadBoatViolationWarning(
+                        sail_number=first_sn,
+                        fleet_group=fleet_label,
+                        laps=boat_laps,
+                        required_laps=required_laps,
+                    )
+                )
+
+    return results, warnings
+
+
+def _score_separate_pin(
+    session: RaceSession,
+) -> tuple[list[ScoredResult], list[ScorerWarning]]:
+    """Implement the ``SEPARATE_PIN`` scoring algorithm.
+
+    Lap formula: ``laps = gate_roundings``, capped at ``required_laps``.
+
+    Gate roundings and finish line crossings are distinct events.  The
+    finishing window marker (``finish_window_marker_position``) splits the
+    gate list into pre-window and window-phase roundings, which affects
+    the within-tier ranking of Gate boats:
+
+    - Pre-window Gate boats rank **ahead** of line-crossers (GP / Finish Only)
+      in the same lap-count tier.
+    - Window-phase Gate boats rank **behind** line-crossers in the same tier.
+    """
+    required_laps: int = session.num_laps
+    gate_cap: int = required_laps  # SEPARATE_PIN: cap = required_laps
+
+    warnings: list[ScorerWarning] = []
+
+    # ------------------------------------------------------------------
+    # Step 1: Missing marker check
+    # ------------------------------------------------------------------
+    has_marker: bool = session.finish_window_marker_position is not None
+    if not has_marker:
+        warnings.append(MissingFinishWindowMarkerWarning())
+    # Threshold: gate list indices >= marker_threshold are window-phase.
+    # When no marker: all roundings are pre-window.
+    marker_threshold: int = (
+        session.finish_window_marker_position + 1  # type: ignore[operator]
+        if has_marker
+        else len(session.gate_roundings)
+    )
+
+    # ------------------------------------------------------------------
+    # Step 2: Count raw gate roundings and apply cap
+    # ------------------------------------------------------------------
+    raw_gate_counts: dict[str, int] = {}
+    for rounding in session.gate_roundings:
+        sn = rounding.sail_number
+        raw_gate_counts[sn] = raw_gate_counts.get(sn, 0) + 1
+
+    gate_counts: dict[str, int] = {}
+    for sn, count in raw_gate_counts.items():
+        if count > gate_cap:
+            warnings.append(
+                ExcessRoundingsWarning(sail_number=sn, raw_count=count, cap=gate_cap)
+            )
+            gate_counts[sn] = gate_cap
+        else:
+            gate_counts[sn] = count
+
+    # ------------------------------------------------------------------
+    # Step 3: For each boat, find the gate-list index (0-based) of its
+    # last *counted* rounding and whether that rounding is window-phase.
+    # ------------------------------------------------------------------
+    boat_running: dict[str, int] = {}
+    boat_last_rounding_idx: dict[str, int] = {}
+
+    for idx, rounding in enumerate(session.gate_roundings):
+        sn = rounding.sail_number
+        boat_running[sn] = boat_running.get(sn, 0) + 1
+        if boat_running[sn] <= gate_counts.get(sn, 0):
+            boat_last_rounding_idx[sn] = idx
+
+    # ------------------------------------------------------------------
+    # Step 4: Build lookups
+    # ------------------------------------------------------------------
+    competitor_map: dict[str, Competitor] = {
+        c.sail_number: c for c in session.competitors
+    }
+
+    finish_entries_by_sail: dict[str, FinishEntry] = {}
+    for finish_e in session.finish_entries:
+        finish_entries_by_sail[finish_e.sail_number] = finish_e
+
+    finish_pos_map: dict[str, int] = {}
+    for finish_e in session.finish_entries:
+        if finish_e.letter_score is None:
+            finish_pos_map[finish_e.sail_number] = finish_e.position
+
+    # ------------------------------------------------------------------
+    # Step 5: Universe of boats (gate ∪ finish, minus green fleet)
+    # ------------------------------------------------------------------
+    universe: set[str] = (
+        set(gate_counts.keys()) | set(finish_entries_by_sail.keys())
+    ) - session.green_fleet
+
+    # ------------------------------------------------------------------
+    # Step 6: Classify each boat
+    # ------------------------------------------------------------------
+    boat_scores: list[_BoatScore] = []
+
+    for sn in sorted(universe):
+        gc: int = gate_counts.get(sn, 0)
+        fe: Optional[FinishEntry] = finish_entries_by_sail.get(sn)
+        on_finish: bool = fe is not None
+        letter_score: Optional[str] = fe.letter_score if fe else None
+
+        comp: Competitor = competitor_map.get(sn) or _make_placeholder_competitor(sn)
+
+        finish_type: FinishType
+        laps: int
+        annotation: Optional[str] = None
+
+        if letter_score is not None:
+            if letter_score in _DNS_DNC_DNF and gc >= 1:
+                # DNS/DNC/DNF override: reclassify as Gate per SI 13.2.3(i)
+                finish_type = FinishType.GATE
+                laps = gc
+                annotation = (
+                    "SI 13.2.3(i): letter score overridden — boat appeared on "
+                    "the gate list and is classified as a Gate finish"
+                )
+                letter_score = None
+            else:
+                finish_type = FinishType.LETTER_SCORE
+                laps = 0
+        elif gc >= gate_cap and on_finish:
+            # Standard: completed all required gate roundings and finished
+            finish_type = FinishType.STANDARD
+            laps = required_laps
+        elif gc >= gate_cap and not on_finish:
+            # Error: No Recorded Finish — reached lap quota without crossing line
+            finish_type = FinishType.ERROR_NO_RECORDED_FINISH
+            laps = gc
+            warnings.append(NoRecordedFinishWarning(sail_number=sn, gate_count=gc))
+        elif on_finish and gc == 0:
+            # Finish Only: crossed the line but never recorded at gate
+            finish_type = FinishType.FINISH_ONLY
+            laps = 1
+            warnings.append(FinishOnlyWarning(sail_number=sn))
+        elif on_finish and 0 < gc < gate_cap:
+            # GP: crossed the line with fewer than required gate roundings
+            # SEPARATE_PIN: laps = gate_roundings (no finish-crossing bonus)
+            finish_type = FinishType.GP
+            laps = gc
+        elif gc >= 1 and not on_finish:
+            # Gate: completed some gate roundings but did not cross finish
+            finish_type = FinishType.GATE
+            laps = gc
+        else:
+            continue  # no activity
+
+        # Determine if this Gate boat's last rounding was window-phase
+        last_idx: Optional[int] = boat_last_rounding_idx.get(sn)
+        is_window: bool = last_idx is not None and last_idx >= marker_threshold
+
+        boat_scores.append(
+            _BoatScore(
+                sail_number=sn,
+                competitor=comp,
+                laps=laps,
+                finish_type=finish_type,
+                annotation=annotation,
+                letter_score=letter_score,
+                finish_pos=finish_pos_map.get(sn),
+                last_lap_seq_pos=last_idx,
+                is_window_phase=is_window,
+            )
+        )
+
+    # ------------------------------------------------------------------
+    # Step 7: Build the GP Finish Ranking
+    #
+    # Full-lap tier (laps == required_laps): Standard in finish order.
+    # Short-lap tiers (laps < required_laps, most laps first):
+    #   (a) Pre-window Gate boats first (by gate-list index of last rounding)
+    #   (b) Line-crossers (GP, Finish Only) in finish list order
+    #   (c) Window-phase Gate boats last (by gate-list index of last rounding)
+    # Letter-score boats appended at bottom.
+    # ------------------------------------------------------------------
+    full_lap_boats: list[_BoatScore] = []
+    # short_lap_map[laps] = (pre_window_gate, line_crossers, window_gate)
+    short_lap_map: dict[
+        int, tuple[list[_BoatScore], list[_BoatScore], list[_BoatScore]]
+    ] = {}
+    letter_score_boats: list[_BoatScore] = []
+
+    for bs in boat_scores:
+        if bs.finish_type == FinishType.LETTER_SCORE:
+            letter_score_boats.append(bs)
+        elif bs.laps == required_laps:
+            full_lap_boats.append(bs)
+        else:
+            if bs.laps not in short_lap_map:
+                short_lap_map[bs.laps] = ([], [], [])
+            pre_gate, crossers, win_gate = short_lap_map[bs.laps]
+            if bs.finish_type == FinishType.GATE:
+                if bs.is_window_phase:
+                    win_gate.append(bs)
+                else:
+                    pre_gate.append(bs)
+            elif bs.finish_type == FinishType.ERROR_NO_RECORDED_FINISH:
+                # NRF boats are Gate-equivalent; treat as pre-window Gate
+                pre_gate.append(bs)
+            else:
+                crossers.append(bs)
+
+    full_lap_boats.sort(key=lambda b: b.finish_pos or 0)
+
+    ranked_boats: list[_BoatScore] = list(full_lap_boats)
+    for laps_count in sorted(short_lap_map.keys(), reverse=True):
+        pre_gate, crossers, win_gate = short_lap_map[laps_count]
+        pre_gate.sort(key=lambda b: b.last_lap_seq_pos or 0)
+        crossers.sort(key=lambda b: b.finish_pos or 0)
+        win_gate.sort(key=lambda b: b.last_lap_seq_pos or 0)
+        ranked_boats.extend(pre_gate)
+        ranked_boats.extend(crossers)
+        ranked_boats.extend(win_gate)
+
+    results: list[ScoredResult] = []
+    non_letter_count = len(ranked_boats)
+    letter_place = non_letter_count + 1
+
+    for place, bs in enumerate(ranked_boats, start=1):
+        results.append(
+            ScoredResult(
+                place=place,
+                competitor=bs.competitor,
+                laps=bs.laps,
+                finish_type=bs.finish_type,
+                annotation=bs.annotation,
+                letter_score=bs.letter_score,
+            )
+        )
+
+    for bs in letter_score_boats:
+        results.append(
+            ScoredResult(
+                place=letter_place,
+                competitor=bs.competitor,
+                laps=bs.laps,
+                finish_type=bs.finish_type,
+                annotation=bs.annotation,
+                letter_score=bs.letter_score,
+            )
+        )
+
+    # ------------------------------------------------------------------
+    # Step 8: Lead-boat violation check (same logic as FINISH_AT_GATE)
+    # ------------------------------------------------------------------
+    laps_by_sail: dict[str, int] = {r.competitor.sail_number: r.laps for r in results}
+
+    eight_two_sails: set[str] = {
+        c.sail_number
+        for c in session.competitors
+        if c.rig_size == "8.2" and c.sail_number not in session.green_fleet
+    }
+
+    finish_entries_sorted = sorted(
+        session.finish_entries, key=lambda entry: entry.position
+    )
+
+    for fleet_label in ("8.2", "non-8.2"):
+        first_sn: Optional[str] = None
+        for finish_entry in finish_entries_sorted:
+            if finish_entry.letter_score is not None:
+                continue
+            if finish_entry.sail_number in session.green_fleet:
+                continue
             if (
                 fleet_label == "non-8.2"
                 and finish_entry.sail_number not in competitor_map
