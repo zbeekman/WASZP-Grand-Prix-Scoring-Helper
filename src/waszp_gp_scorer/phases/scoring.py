@@ -18,12 +18,14 @@ Pure helpers
 
 from __future__ import annotations
 
-from typing import Optional
+from pathlib import Path
+from typing import Callable, Optional
 
 from waszp_gp_scorer.models import (
     Competitor,
     FinishEntry,
     FinishType,
+    RaceSession,
     ScoredResult,
 )
 
@@ -194,12 +196,29 @@ def original_finish_list_rows(
     return rows
 
 
+def session_has_data(session: RaceSession) -> bool:
+    """Return ``True`` if *session* contains any meaningful recorded data.
+
+    A session has data when it has at least one competitor, gate rounding,
+    or finish entry recorded.  Used to decide whether to show an exit/save
+    prompt.
+
+    Args:
+        session: The race session to inspect.
+
+    Returns:
+        ``True`` when the session has competitors, gate roundings, or finish
+        entries; ``False`` for a completely empty session.
+    """
+    return bool(session.competitors or session.gate_roundings or session.finish_entries)
+
+
 # ---------------------------------------------------------------------------
 # Tkinter-dependent widget — only defined when tkinter is available
 # ---------------------------------------------------------------------------
 try:
     import tkinter as tk
-    from tkinter import messagebox, ttk
+    from tkinter import filedialog, messagebox, ttk
 
     from waszp_gp_scorer.scorer import (
         LeadBoatViolationWarning,
@@ -236,6 +255,7 @@ try:
             self,
             parent: tk.Widget,
             auto_save: "Optional[AutoSaveSession]" = None,
+            on_export_done: "Optional[Callable[[], None]]" = None,
         ) -> None:
             super().__init__(parent)
             self._auto_save: "Optional[AutoSaveSession]" = None
@@ -243,6 +263,7 @@ try:
             self._scorer_warnings: list[ScorerWarning] = []
             self._rig_vars: dict[str, tk.BooleanVar] = {}
             self._tooltip_window: "Optional[tk.Toplevel]" = None
+            self._on_export_done: "Optional[Callable[[], None]]" = on_export_done
 
             self._build_ui()
 
@@ -258,9 +279,7 @@ try:
             self.columnconfigure(0, weight=1)
 
             # --- Rig-size filter row ---
-            self._filter_frame = ttk.LabelFrame(
-                self, text="Rig-size filter", padding=4
-            )
+            self._filter_frame = ttk.LabelFrame(self, text="Rig-size filter", padding=4)
             self._filter_frame.grid(row=0, column=0, sticky=tk.EW, padx=8, pady=(4, 2))
             # Checkboxes are added dynamically in _update_rig_filter_checkboxes()
 
@@ -281,14 +300,10 @@ try:
 
             # Tooltip bindings for Gate rows
             self._ranking_tree.bind("<Motion>", self._on_ranking_motion)
-            self._ranking_tree.bind(
-                "<Leave>", lambda _e: self._hide_tooltip()
-            )
+            self._ranking_tree.bind("<Leave>", lambda _e: self._hide_tooltip())
 
             # Right: Original Finish List
-            right_frame = ttk.LabelFrame(
-                panels, text="Original Finish List", padding=4
-            )
+            right_frame = ttk.LabelFrame(panels, text="Original Finish List", padding=4)
             right_frame.grid(row=0, column=1, sticky=tk.NSEW, padx=(4, 0))
             right_frame.rowconfigure(0, weight=1)
             right_frame.columnconfigure(0, weight=1)
@@ -319,6 +334,14 @@ try:
             self._gate_info_label.grid(
                 row=3, column=0, sticky=tk.EW, padx=12, pady=(0, 4)
             )
+
+            # --- Export row ---
+            export_bar = ttk.Frame(self)
+            export_bar.grid(row=4, column=0, sticky=tk.EW, padx=8, pady=(0, 8))
+            self._export_btn = ttk.Button(
+                export_bar, text="Export to Excel\u2026", command=self._do_export
+            )
+            self._export_btn.pack(side=tk.RIGHT)
 
         def _build_table(self, parent: tk.Widget) -> ttk.Treeview:
             """Build a Treeview table with :data:`RESULT_COLUMNS` headings.
@@ -367,6 +390,50 @@ try:
             """
             self._auto_save = auto_save
             self.refresh()
+
+        @property
+        def has_results(self) -> bool:
+            """Return ``True`` when scored results are currently available."""
+            return bool(self._scored_results)
+
+        # ------------------------------------------------------------------
+        # Export
+        # ------------------------------------------------------------------
+
+        def _do_export(self) -> None:
+            """Open a save-file dialog and export results to Excel.
+
+            Shows an error dialog if no session or results are available, or if
+            the export fails.  Calls :attr:`_on_export_done` on success.
+            """
+            if self._auto_save is None:
+                messagebox.showwarning("No session", "No active session to export.")
+                return
+            if not self._scored_results:
+                messagebox.showwarning("No results", "No scored results to export.")
+                return
+
+            from waszp_gp_scorer.exporter import export, export_filename
+
+            default_name = export_filename(self._auto_save.session)
+            path_str = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel workbook", "*.xlsx"), ("All files", "*.*")],
+                initialfile=default_name,
+                title="Export to Excel",
+            )
+            if not path_str:
+                return  # User cancelled
+
+            try:
+                export(self._auto_save.session, self._scored_results, Path(path_str))
+            except Exception as exc:  # noqa: BLE001
+                messagebox.showerror("Export error", f"Could not export:\n{exc}")
+                return
+
+            messagebox.showinfo("Export complete", f"Results exported to:\n{path_str}")
+            if self._on_export_done is not None:
+                self._on_export_done()
 
         # ------------------------------------------------------------------
         # Scoring & display refresh

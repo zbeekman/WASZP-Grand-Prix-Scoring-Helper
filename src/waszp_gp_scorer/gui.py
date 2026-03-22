@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 from typing import Optional
 
-from waszp_gp_scorer.session import AutoSaveSession, load
+from waszp_gp_scorer.session import AutoSaveSession, load, save, session_filename
 from waszp_gp_scorer.phases.setup import SetupPhase
 from waszp_gp_scorer.phases.data_entry import GateRoundingPhase
 from waszp_gp_scorer.phases.finish_entry import FinishListPhase
@@ -111,7 +111,10 @@ class App(_DND_ROOT):  # type: ignore[misc]
         )
         self._gate_phase = GateRoundingPhase(self._content)
         self._finish_phase = FinishListPhase(self._content)
-        self._scoring_phase = ScoringPhase(self._content)
+        self._scoring_phase = ScoringPhase(
+            self._content,
+            on_export_done=self._on_export_done,
+        )
         self._phase_frames: dict[str, ttk.Frame] = {
             "setup": self._setup_phase,
             "gate_rounding": self._gate_phase,
@@ -122,6 +125,10 @@ class App(_DND_ROOT):  # type: ignore[misc]
     # ------------------------------------------------------------------
     # Session lifecycle
     # ------------------------------------------------------------------
+
+    def _on_export_done(self) -> None:
+        """Mark results as exported (called by :class:`ScoringPhase` on success)."""
+        self._has_unexported_results = False
 
     def _on_session_ready(self, auto_save: AutoSaveSession) -> None:
         """Receive the configured session from :class:`SetupPhase`.
@@ -181,6 +188,8 @@ class App(_DND_ROOT):  # type: ignore[misc]
         # Trigger scoring recalculation when navigating to the scoring phase.
         if phase_name == "scoring":
             self._scoring_phase.refresh()
+            if self._scoring_phase.has_results:
+                self._has_unexported_results = True
 
         # Hide all phase frames and show the current one.
         for child in self._content.winfo_children():
@@ -234,7 +243,14 @@ class App(_DND_ROOT):  # type: ignore[misc]
     # ------------------------------------------------------------------
 
     def _on_close(self) -> None:
-        """Handle window close: prompt if results have not been exported."""
+        """Handle window close: prompt about export and offer session save.
+
+        Two prompts are shown when applicable:
+
+        1. If results have not been exported, ask whether to exit anyway.
+        2. If an active session exists, offer to save a copy of the session
+           JSON to a user-chosen location (in addition to the auto-save).
+        """
         if self._has_unexported_results and self._auto_save is not None:
             answer = messagebox.askyesnocancel(
                 "Exit without exporting?",
@@ -242,8 +258,38 @@ class App(_DND_ROOT):  # type: ignore[misc]
                 "Your session is auto-saved and can be resumed.\n\n"
                 "Exit anyway?",
             )
+            if not answer:
+                # None = Cancel (×), False = No — both mean stay open.
+                return
+
+        if self._auto_save is not None:
+            fname = session_filename(self._auto_save.session)
+            answer = messagebox.askyesnocancel(
+                "Save session?",
+                f"Would you like to save a copy of your session file?\n\n"
+                f"Session is auto-saved as:  {fname}",
+            )
             if answer is None:
                 return  # Cancel — stay open.
+            if answer:
+                path_str = filedialog.asksaveasfilename(
+                    defaultextension=".json",
+                    filetypes=[
+                        ("Session file", "*.json"),
+                        ("All files", "*.*"),
+                    ],
+                    initialfile=fname,
+                    title="Save session as\u2026",
+                )
+                if path_str:
+                    try:
+                        save(self._auto_save.session, Path(path_str))
+                    except Exception as exc:  # noqa: BLE001
+                        messagebox.showerror(
+                            "Save error", f"Could not save session:\n{exc}"
+                        )
+                        return
+
         self.destroy()
 
 
