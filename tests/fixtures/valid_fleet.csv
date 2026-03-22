@@ -1,0 +1,16 @@
+Sail Number,Sailor Country Code,Sailor Name,Sail Size,Division,Mobile Number,Sailor Email
+4017,USA,Alex Johnson,8.2,Open,+15551234567,alex.johnson@example.com
+2451,CAN,Jordan Smith,7.5,Youth (U21),+15552345678,jordan.smith@example.com
+3198,AUS,Sam Williams,6.9,Master (40+),+61412345678,sam.williams@example.com
+2763,NZL,Taylor Brown,5.8,Open,+6421234567,taylor.brown@example.com
+1205,GBR,Morgan Davis,8.2,Youth (U21),+441234567890,morgan.davis@example.com
+3847,FRA,Alex Dubois,7.5,Master (40+),+33612345678,alex.dubois@example.com
+4512,ESP,Charlie Martin,6.9,Junior (U17),,charlie.martin@example.com
+1089,ITA,Riley Costa,8.2,Open,+39123456789,riley.costa@example.com
+2934,GER,Drew Mueller,7.5,Youth (U21),,drew.mueller@example.com
+5001,JPN,Casey Tanaka,5.8,Master (40+),+81312345678,casey.tanaka@example.com
+1723,USA,Harper Wilson,8.2,Open,,harper.wilson@example.com
+3361,CAN,Blake Anderson,6.9,Junior (U17),+15553456789,blake.anderson@example.com
+4888,AUS,Skyler Lee,8.2,Youth (U21),+61498765432,skyler.lee@example.com
+2110,NZL,River Garcia,7.5,Open,+6498765432,river.garcia@example.com
+9999,USA,Unknown Sailor,3.9,Open,,
