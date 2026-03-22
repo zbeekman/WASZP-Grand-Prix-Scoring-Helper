@@ -21,6 +21,7 @@ from typing import Optional
 from waszp_gp_scorer.session import AutoSaveSession, load
 from waszp_gp_scorer.phases.setup import SetupPhase
 from waszp_gp_scorer.phases.data_entry import GateRoundingPhase
+from waszp_gp_scorer.phases.finish_entry import FinishListPhase
 
 # ---------------------------------------------------------------------------
 # Root window base: use tkinterdnd2 when available for platform DnD support.
@@ -108,9 +109,11 @@ class App(_DND_ROOT):  # type: ignore[misc]
             session_dir=self._session_dir,
         )
         self._gate_phase = GateRoundingPhase(self._content)
+        self._finish_phase = FinishListPhase(self._content)
         self._phase_frames: dict[str, ttk.Frame] = {
             "setup": self._setup_phase,
             "gate_rounding": self._gate_phase,
+            "finish": self._finish_phase,
         }
 
     # ------------------------------------------------------------------
@@ -126,6 +129,7 @@ class App(_DND_ROOT):  # type: ignore[misc]
         self._auto_save = auto_save
         self._has_unexported_results = False
         self._gate_phase.set_session(auto_save)
+        self._finish_phase.set_session(auto_save)
 
     def _try_resume_session(self) -> None:
         """Offer to resume the most recent session file if one exists."""
@@ -151,6 +155,7 @@ class App(_DND_ROOT):  # type: ignore[misc]
         self._auto_save = auto_save
         self._setup_phase.load_session(auto_save)
         self._gate_phase.set_session(auto_save)
+        self._finish_phase.set_session(auto_save)
 
     # ------------------------------------------------------------------
     # Phase navigation

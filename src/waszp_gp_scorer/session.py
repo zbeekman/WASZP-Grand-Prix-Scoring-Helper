@@ -345,6 +345,62 @@ class AutoSaveSession:
             roundings[index].sail_number = sail_number
             self._trigger_save()
 
+    def remove_finish_entry(self, index: int) -> None:
+        """Remove finish entry at 0-based *index*, renumber, and auto-save.
+
+        Args:
+            index: 0-based index of the entry to remove. No-op if out of range.
+        """
+        entries = self._session.finish_entries
+        if not (0 <= index < len(entries)):
+            return
+        entries.pop(index)
+        for i, e in enumerate(entries):
+            e.position = i + 1
+        self._trigger_save()
+
+    def insert_finish_entry(self, index: int, sail_number: str) -> None:
+        """Insert a finish entry before 0-based *index*, renumber, and auto-save.
+
+        Args:
+            index: 0-based index to insert before.  Clamped to valid range.
+            sail_number: Sail number for the new entry.
+        """
+        entries = self._session.finish_entries
+        clamped = max(0, min(index, len(entries)))
+        new_entry = FinishEntry(position=clamped + 1, sail_number=sail_number)
+        entries.insert(clamped, new_entry)
+        for i, e in enumerate(entries):
+            e.position = i + 1
+        self._trigger_save()
+
+    def replace_finish_entry_sail(self, index: int, sail_number: str) -> None:
+        """Replace the sail number at 0-based *index* and auto-save.
+
+        Args:
+            index: 0-based index of the entry to edit.  No-op if out of range.
+            sail_number: The replacement sail number.
+        """
+        entries = self._session.finish_entries
+        if 0 <= index < len(entries):
+            entries[index].sail_number = sail_number
+            self._trigger_save()
+
+    def set_finish_entry_letter_score(
+        self, index: int, letter_score: Optional[str]
+    ) -> None:
+        """Set or clear the letter score at 0-based *index* and auto-save.
+
+        Args:
+            index: 0-based index of the entry to update.  No-op if out of range.
+            letter_score: The letter score string (e.g. ``"DNS"``), or ``None``
+                to clear any existing score.
+        """
+        entries = self._session.finish_entries
+        if 0 <= index < len(entries):
+            entries[index].letter_score = letter_score
+            self._trigger_save()
+
     def update_metadata(
         self,
         *,
