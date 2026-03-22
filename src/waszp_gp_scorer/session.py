@@ -1,0 +1,281 @@
+"""Session persistence: JSON save and load for RaceSession.
+
+Provides ``save()`` and ``load()`` functions for round-trip serialization
+of :class:`~waszp_gp_scorer.models.RaceSession` objects, an
+:class:`AutoSaveSession` wrapper that triggers ``save()`` on every mutation,
+and the session file naming convention.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+from waszp_gp_scorer.models import (
+    Competitor,
+    FinishEntry,
+    FinishLineConfig,
+    GateRounding,
+    RaceSession,
+)
+
+SCHEMA_VERSION: int = 1
+_DEFAULT_LAP_COUNTING_LOCATION = "Leeward gate (mark 2p)"
+
+
+def session_filename(session: RaceSession) -> str:
+    """Return the canonical filename for a session file.
+
+    Format: ``{EventName}_Race{N}_{Date}_session.json``
+
+    Spaces in the event name are replaced with underscores. Falls back to
+    ``"Session"`` when ``event_name`` is empty.
+
+    Args:
+        session: The race session to name.
+
+    Returns:
+        A filename string suitable for use on all major platforms.
+    """
+    safe_name = (
+        session.event_name.replace(" ", "_") if session.event_name else "Session"
+    )
+    return f"{safe_name}_Race{session.race_number}_{session.race_date}_session.json"
+
+
+def _serialize(session: RaceSession) -> dict[str, Any]:
+    """Convert a :class:`RaceSession` to a JSON-serializable dict.
+
+    Args:
+        session: The session to serialize.
+
+    Returns:
+        A dict suitable for passing to :func:`json.dumps`.
+    """
+    return {
+        "schema_version": session.schema_version,
+        "event_name": session.event_name,
+        "race_number": session.race_number,
+        "race_date": session.race_date,
+        "start_time": session.start_time,
+        "num_laps": session.num_laps,
+        "course_type": session.course_type,
+        "finish_line_config": session.finish_line_config.value,
+        "finish_window_marker_position": session.finish_window_marker_position,
+        "lap_counting_location": session.lap_counting_location,
+        "competitors": [
+            {
+                "sail_number": c.sail_number,
+                "country_code": c.country_code,
+                "name": c.name,
+                "rig_size": c.rig_size,
+                "division": c.division,
+                "phone": c.phone,
+                "email": c.email,
+            }
+            for c in session.competitors
+        ],
+        "green_fleet": sorted(session.green_fleet),
+        "gate_roundings": [
+            {"position": g.position, "sail_number": g.sail_number}
+            for g in session.gate_roundings
+        ],
+        "finish_entries": [
+            {
+                "position": f.position,
+                "sail_number": f.sail_number,
+                "letter_score": f.letter_score,
+            }
+            for f in session.finish_entries
+        ],
+    }
+
+
+def _deserialize(data: dict[str, Any]) -> RaceSession:
+    """Convert a raw JSON dict back to a :class:`RaceSession`.
+
+    Missing optional fields are filled with sensible defaults so that
+    older session files continue to load after schema additions.
+
+    Args:
+        data: Dict parsed from session JSON.
+
+    Returns:
+        A fully-populated :class:`RaceSession`.
+    """
+    competitors = [
+        Competitor(
+            sail_number=c["sail_number"],
+            country_code=c["country_code"],
+            name=c["name"],
+            rig_size=c["rig_size"],
+            division=c["division"],
+            phone=c.get("phone"),
+            email=c.get("email"),
+        )
+        for c in data.get("competitors", [])
+    ]
+    green_fleet: set[str] = set(data.get("green_fleet", []))
+    gate_roundings = [
+        GateRounding(position=g["position"], sail_number=g["sail_number"])
+        for g in data.get("gate_roundings", [])
+    ]
+    finish_entries = [
+        FinishEntry(
+            position=f["position"],
+            sail_number=f["sail_number"],
+            letter_score=f.get("letter_score"),
+        )
+        for f in data.get("finish_entries", [])
+    ]
+
+    finish_line_config_raw = data.get("finish_line_config")
+    finish_line_config = (
+        FinishLineConfig(finish_line_config_raw)
+        if finish_line_config_raw is not None
+        else FinishLineConfig.FINISH_AT_GATE
+    )
+
+    return RaceSession(
+        schema_version=data.get("schema_version", SCHEMA_VERSION),
+        event_name=data.get("event_name", ""),
+        race_number=data.get("race_number", 1),
+        race_date=data.get("race_date", ""),
+        start_time=data.get("start_time"),
+        num_laps=data.get("num_laps", 2),
+        course_type=data.get("course_type", "Standard WASZP W/L (Gate)"),
+        finish_line_config=finish_line_config,
+        finish_window_marker_position=data.get("finish_window_marker_position"),
+        lap_counting_location=data.get(
+            "lap_counting_location", _DEFAULT_LAP_COUNTING_LOCATION
+        ),
+        competitors=competitors,
+        green_fleet=green_fleet,
+        gate_roundings=gate_roundings,
+        finish_entries=finish_entries,
+    )
+
+
+def save(session: RaceSession, path: Path) -> None:
+    """Serialize ``session`` to JSON at ``path``.
+
+    The file is written with 2-space indentation for human readability.
+    Parent directories are created automatically if they do not exist.
+
+    Args:
+        session: The race session to persist.
+        path: Destination file path (will be created or overwritten).
+    """
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    payload = _serialize(session)
+    dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def load(path: Path) -> RaceSession:
+    """Deserialize a JSON session file into a :class:`RaceSession`.
+
+    Missing optional fields are filled with defaults so that older session
+    files remain loadable after schema additions.
+
+    Args:
+        path: Path to the ``.json`` session file.
+
+    Returns:
+        A :class:`RaceSession` populated from the file.
+
+    Raises:
+        FileNotFoundError: If ``path`` does not exist.
+        json.JSONDecodeError: If the file contains invalid JSON.
+    """
+    data: dict[str, Any] = json.loads(Path(path).read_text(encoding="utf-8"))
+    return _deserialize(data)
+
+
+class AutoSaveSession:
+    """Wraps a :class:`RaceSession` and triggers :func:`save` on every mutation.
+
+    All mutating operations must go through this wrapper so that the session
+    file is kept in sync with in-memory state.
+
+    Args:
+        session: The race session to wrap.
+        path: Destination file path for auto-saves.
+        on_save: Optional callback invoked with the path after each save.
+
+    Example::
+
+        auto = AutoSaveSession(session, path=Path("session.json"))
+        auto.add_gate_rounding(GateRounding(position=1, sail_number="AUS1"))
+        # session.json is updated automatically
+    """
+
+    def __init__(
+        self,
+        session: RaceSession,
+        path: Path,
+        on_save: Optional[Callable[[Path], None]] = None,
+    ) -> None:
+        self._session = session
+        self._path = Path(path)
+        self._on_save = on_save
+
+    @property
+    def session(self) -> RaceSession:
+        """The underlying :class:`RaceSession`."""
+        return self._session
+
+    def _trigger_save(self) -> None:
+        """Write the session to disk and invoke the callback if set."""
+        save(self._session, self._path)
+        if self._on_save is not None:
+            self._on_save(self._path)
+
+    def add_gate_rounding(self, rounding: GateRounding) -> None:
+        """Append a gate rounding entry and auto-save.
+
+        Args:
+            rounding: The :class:`GateRounding` to append.
+        """
+        self._session.gate_roundings.append(rounding)
+        self._trigger_save()
+
+    def add_finish_entry(self, entry: FinishEntry) -> None:
+        """Append a finish entry and auto-save.
+
+        Args:
+            entry: The :class:`FinishEntry` to append.
+        """
+        self._session.finish_entries.append(entry)
+        self._trigger_save()
+
+    def set_finish_window_marker(self, position: Optional[int]) -> None:
+        """Update the finish-window marker position and auto-save.
+
+        Args:
+            position: 0-based index into ``gate_roundings``, or ``None`` to
+                clear the marker.
+        """
+        self._session.finish_window_marker_position = position
+        self._trigger_save()
+
+    def add_to_green_fleet(self, sail_number: str) -> None:
+        """Add a sail number to the green fleet and auto-save.
+
+        Args:
+            sail_number: The sail number to mark as green fleet.
+        """
+        self._session.green_fleet.add(sail_number)
+        self._trigger_save()
+
+    def remove_from_green_fleet(self, sail_number: str) -> None:
+        """Remove a sail number from the green fleet and auto-save.
+
+        Does nothing if ``sail_number`` is not in the green fleet.
+
+        Args:
+            sail_number: The sail number to remove.
+        """
+        self._session.green_fleet.discard(sail_number)
+        self._trigger_save()
