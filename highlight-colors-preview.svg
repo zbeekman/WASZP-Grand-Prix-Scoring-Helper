@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="712" viewBox="0 0 640 712">
+  <defs>
+    <style>
+      text { font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif; }
+      .mono { font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
+    </style>
+  </defs>
+
+  <!-- Card background -->
+  <rect width="640" height="712" rx="14" fill="#F2F2F7"/>
+
+  <!-- ── TITLE ── -->
+  <text x="320" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#1C1C1E">Gate Rounding Highlight Colours</text>
+  <text x="320" y="57" text-anchor="middle" font-size="12" fill="#6E6E73">WASZP GP Scorer · two independent colour signals per row</text>
+
+  <!-- ══════════════════════════════════════════════
+       SWATCH PANEL
+  ══════════════════════════════════════════════ -->
+  <rect x="24" y="68" width="592" height="282" rx="10" fill="white" stroke="#D1D1D6" stroke-width="1"/>
+
+  <!-- Group sub-headers -->
+  <text x="44"  y="86" font-size="10" font-weight="600" letter-spacing="0.5" fill="#AEAEB2">ROUNDING</text>
+  <!-- BG group label (spans swatch + hex columns) -->
+  <rect x="94" y="72" width="170" height="18" rx="4" fill="#F2F2F7"/>
+  <text x="179" y="84" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="0.6" fill="#8E8E93">BACKGROUND  ·  this row</text>
+  <!-- TEXT group label -->
+  <rect x="272" y="72" width="192" height="18" rx="4" fill="#F2F2F7"/>
+  <text x="368" y="84" text-anchor="middle" font-size="9" font-weight="700" letter-spacing="0.6" fill="#8E8E93">TEXT COLOUR  ·  all rows for this boat</text>
+
+  <!-- column headers -->
+  <text x="44"  y="104" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">ROUNDING</text>
+  <text x="100" y="104" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">SWATCH</text>
+  <text x="208" y="104" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">HEX</text>
+  <text x="278" y="104" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">SAMPLE</text>
+  <text x="368" y="104" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">HEX</text>
+  <text x="452" y="104" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">COLOUR NAME</text>
+  <line x1="36" y1="110" x2="604" y2="110" stroke="#F0F0F0" stroke-width="1.5"/>
+
+  <!-- ── Row 1st: no BG fill, default black text ── -->
+  <rect x="36" y="110" width="568" height="42" fill="white"/>
+  <text x="44" y="136" font-size="14" font-weight="600" fill="#444">1st</text>
+  <!-- BG swatch: no fill -->
+  <rect x="100" y="118" width="100" height="24" rx="5" fill="white" stroke="#C7C7CC" stroke-width="1.2"/>
+  <text x="150" y="134" text-anchor="middle" font-size="11" fill="#AEAEB2">no fill</text>
+  <!-- BG hex -->
+  <text x="208" y="136" class="mono" font-size="12" fill="#8E8E93">—</text>
+  <!-- TEXT sample: black on white -->
+  <rect x="278" y="118" width="82" height="24" rx="5" fill="white" stroke="#C7C7CC" stroke-width="1.2"/>
+  <text x="319" y="134" text-anchor="middle" font-size="13" font-weight="700" fill="#1C1C1E">4017</text>
+  <!-- TEXT hex -->
+  <text x="368" y="136" class="mono" font-size="12" fill="#8E8E93">#1C1C1E</text>
+  <!-- name -->
+  <text x="452" y="136" font-size="11" fill="#8E8E93">Default — 1 rounding only</text>
+
+  <!-- ── Row 2nd: blue BG, dark blue text ── -->
+  <rect x="36" y="152" width="568" height="42" fill="#FAFAFA"/>
+  <text x="44" y="178" font-size="14" font-weight="600" fill="#444">2nd</text>
+  <rect x="100" y="160" width="100" height="24" rx="5" fill="#66D9FF"/>
+  <text x="150" y="176" text-anchor="middle" font-size="11" font-weight="600" fill="#0088AA">Highlighter Blue</text>
+  <text x="208" y="178" class="mono" font-size="12" fill="#333">#66D9FF</text>
+  <rect x="278" y="160" width="82" height="24" rx="5" fill="white" stroke="#C7C7CC" stroke-width="1.2"/>
+  <text x="319" y="176" text-anchor="middle" font-size="13" font-weight="700" fill="#0088AA">4017</text>
+  <text x="368" y="178" class="mono" font-size="12" fill="#333">#0088AA</text>
+  <text x="452" y="178" font-size="11" fill="#333">Medium teal-blue — 2+ roundings</text>
+
+  <!-- ── Row 3rd: green BG, dark green text ── -->
+  <rect x="36" y="194" width="568" height="42" fill="white"/>
+  <text x="44" y="220" font-size="14" font-weight="600" fill="#444">3rd</text>
+  <rect x="100" y="202" width="100" height="24" rx="5" fill="#CCFF66"/>
+  <text x="150" y="218" text-anchor="middle" font-size="11" font-weight="600" fill="#5A9900">Highlighter Green</text>
+  <text x="208" y="220" class="mono" font-size="12" fill="#333">#CCFF66</text>
+  <rect x="278" y="202" width="82" height="24" rx="5" fill="white" stroke="#C7C7CC" stroke-width="1.2"/>
+  <text x="319" y="218" text-anchor="middle" font-size="13" font-weight="700" fill="#5A9900">4017</text>
+  <text x="368" y="220" class="mono" font-size="12" fill="#333">#5A9900</text>
+  <text x="452" y="220" font-size="11" fill="#333">Medium green — 3+ roundings</text>
+
+  <!-- ── Row 4th: yellow BG, dark olive text ── -->
+  <rect x="36" y="236" width="568" height="42" fill="#FAFAFA"/>
+  <text x="44" y="262" font-size="14" font-weight="600" fill="#444">4th</text>
+  <rect x="100" y="244" width="100" height="24" rx="5" fill="#FFFF66"/>
+  <text x="150" y="260" text-anchor="middle" font-size="11" font-weight="600" fill="#9E9E00">Highlighter Yellow</text>
+  <text x="208" y="262" class="mono" font-size="12" fill="#333">#FFFF66</text>
+  <rect x="278" y="244" width="82" height="24" rx="5" fill="white" stroke="#C7C7CC" stroke-width="1.2"/>
+  <text x="319" y="260" text-anchor="middle" font-size="13" font-weight="700" fill="#9E9E00">4017</text>
+  <text x="368" y="262" class="mono" font-size="12" fill="#333">#9E9E00</text>
+  <text x="452" y="262" font-size="11" fill="#333">Medium olive — 4+ roundings</text>
+
+  <!-- ── Row 5th+: pink BG, dark pink text ── -->
+  <rect x="36" y="278" width="568" height="42" fill="white"/>
+  <text x="44" y="304" font-size="14" font-weight="600" fill="#444">5th+</text>
+  <rect x="100" y="286" width="100" height="24" rx="5" fill="#FF80BF"/>
+  <text x="150" y="302" text-anchor="middle" font-size="11" font-weight="600" fill="#AA0055">Highlighter Pink</text>
+  <text x="208" y="304" class="mono" font-size="12" fill="#333">#FF80BF</text>
+  <rect x="278" y="286" width="82" height="24" rx="5" fill="white" stroke="#C7C7CC" stroke-width="1.2"/>
+  <text x="319" y="302" text-anchor="middle" font-size="13" font-weight="700" fill="#AA0055">4017</text>
+  <text x="368" y="304" class="mono" font-size="12" fill="#333">#AA0055</text>
+  <text x="452" y="304" font-size="11" fill="#333">Dark pink — 5+ roundings</text>
+
+  <!-- ══════════════════════════════════════════════
+       EXAMPLE TABLE
+       Snapshot after 8 entries. Text colours are
+       retroactive — updated when each new rounding
+       is added for a boat.
+  ══════════════════════════════════════════════ -->
+  <rect x="24" y="366" width="592" height="318" rx="10" fill="white" stroke="#D1D1D6" stroke-width="1"/>
+
+  <text x="44" y="386" font-size="10" font-weight="600" letter-spacing="0.7" fill="#888">EXAMPLE — GATE LIST (snapshot after 8 entries; text colour updates retroactively)</text>
+  <line x1="36" y1="392" x2="604" y2="392" stroke="#F0F0F0" stroke-width="1.5"/>
+
+  <!-- table header row -->
+  <rect x="36" y="394" width="568" height="24" fill="#F2F2F7"/>
+  <g font-size="11" font-weight="600" fill="#636366" text-anchor="middle">
+    <text x="60"  y="410">#</text>
+    <text x="112" y="410">Sail</text>
+    <text x="210" y="410">Sailor</text>
+    <text x="316" y="410">Country</text>
+    <text x="384" y="410">Rig</text>
+    <text x="554" y="410">Lap</text>
+  </g>
+
+  <!-- ── Row 1: 4017, 1st rounding
+       4017 ends up with 3 roundings → dark green text #5A9900 on white bg.
+       White bg (1st rounding) + dark green text = "this boat has 3 laps recorded" ── -->
+  <rect x="36" y="418" width="568" height="28" fill="white"/>
+  <text x="60"  y="436" text-anchor="middle" font-size="11" fill="#AEAEB2">1</text>
+  <text x="112" y="436" text-anchor="middle" font-size="13" font-weight="700" fill="#5A9900">4017</text>
+  <text x="210" y="436" text-anchor="middle" font-size="12" fill="#5A9900">Carter, J.</text>
+  <text x="316" y="436" text-anchor="middle" font-size="12" fill="#5A9900">USA</text>
+  <text x="384" y="436" text-anchor="middle" font-size="12" fill="#5A9900">8.2</text>
+  <rect x="526" y="421" width="56" height="20" rx="3" fill="white" stroke="#D1D1D6" stroke-width="0.8"/>
+  <text x="554" y="435" text-anchor="middle" font-size="12" font-weight="600" fill="#AEAEB2">1st</text>
+
+  <!-- ── Row 2: 2763, 1st rounding
+       2763 ends up with 2 roundings → dark blue text #0088AA on white bg ── -->
+  <rect x="36" y="446" width="568" height="28" fill="#FAFAFA"/>
+  <text x="60"  y="464" text-anchor="middle" font-size="11" fill="#AEAEB2">2</text>
+  <text x="112" y="464" text-anchor="middle" font-size="13" font-weight="700" fill="#0088AA">2763</text>
+  <text x="210" y="464" text-anchor="middle" font-size="12" fill="#0088AA">Carter, T.</text>
+  <text x="316" y="464" text-anchor="middle" font-size="12" fill="#0088AA">USA</text>
+  <text x="384" y="464" text-anchor="middle" font-size="12" fill="#0088AA">8.2</text>
+  <rect x="526" y="449" width="56" height="20" rx="3" fill="white" stroke="#D1D1D6" stroke-width="0.8"/>
+  <text x="554" y="463" text-anchor="middle" font-size="12" font-weight="600" fill="#AEAEB2">1st</text>
+
+  <!-- ── Row 3: 2451, 1st rounding
+       2451 ends up with 2 roundings → dark blue text on white bg ── -->
+  <rect x="36" y="474" width="568" height="28" fill="white"/>
+  <text x="60"  y="492" text-anchor="middle" font-size="11" fill="#AEAEB2">3</text>
+  <text x="112" y="492" text-anchor="middle" font-size="13" font-weight="700" fill="#0088AA">2451</text>
+  <text x="210" y="492" text-anchor="middle" font-size="12" fill="#0088AA">Brooks, E.</text>
+  <text x="316" y="492" text-anchor="middle" font-size="12" fill="#0088AA">CAN</text>
+  <text x="384" y="492" text-anchor="middle" font-size="12" fill="#0088AA">7.5</text>
+  <rect x="526" y="477" width="56" height="20" rx="3" fill="white" stroke="#D1D1D6" stroke-width="0.8"/>
+  <text x="554" y="491" text-anchor="middle" font-size="12" font-weight="600" fill="#AEAEB2">1st</text>
+
+  <!-- ── Row 4: 3198, 1st rounding
+       3198 has ONLY 1 rounding → default black text. Contrast with rows 1–3. ── -->
+  <rect x="36" y="502" width="568" height="28" fill="#FAFAFA"/>
+  <text x="60"  y="520" text-anchor="middle" font-size="11" fill="#AEAEB2">4</text>
+  <text x="112" y="520" text-anchor="middle" font-size="13" font-weight="700" fill="#1C1C1E">3198</text>
+  <text x="210" y="520" text-anchor="middle" font-size="12" fill="#3C3C43">Fischer, L.</text>
+  <text x="316" y="520" text-anchor="middle" font-size="12" fill="#3C3C43">CAN</text>
+  <text x="384" y="520" text-anchor="middle" font-size="12" fill="#3C3C43">7.5</text>
+  <rect x="526" y="505" width="56" height="20" rx="3" fill="white" stroke="#D1D1D6" stroke-width="0.8"/>
+  <text x="554" y="519" text-anchor="middle" font-size="12" font-weight="600" fill="#AEAEB2">1st</text>
+
+  <!-- ── Row 5: 4017, 2nd rounding → blue BG + dark green text (3 total) ── -->
+  <rect x="36" y="530" width="568" height="28" fill="#66D9FF"/>
+  <text x="60"  y="548" text-anchor="middle" font-size="11" fill="#007090">5</text>
+  <text x="112" y="548" text-anchor="middle" font-size="13" font-weight="700" fill="#5A9900">4017</text>
+  <text x="210" y="548" text-anchor="middle" font-size="12" fill="#5A9900">Carter, J.</text>
+  <text x="316" y="548" text-anchor="middle" font-size="12" fill="#5A9900">USA</text>
+  <text x="384" y="548" text-anchor="middle" font-size="12" fill="#5A9900">8.2</text>
+  <rect x="526" y="533" width="56" height="20" rx="3" fill="#00BFFF" fill-opacity="0.35"/>
+  <text x="554" y="547" text-anchor="middle" font-size="12" font-weight="700" fill="#00304A">2nd</text>
+
+  <!-- ── Row 6: 2763, 2nd rounding → blue BG + dark blue text (2 total) ── -->
+  <rect x="36" y="558" width="568" height="28" fill="#66D9FF"/>
+  <text x="60"  y="576" text-anchor="middle" font-size="11" fill="#007090">6</text>
+  <text x="112" y="576" text-anchor="middle" font-size="13" font-weight="700" fill="#0088AA">2763</text>
+  <text x="210" y="576" text-anchor="middle" font-size="12" fill="#0088AA">Carter, T.</text>
+  <text x="316" y="576" text-anchor="middle" font-size="12" fill="#0088AA">USA</text>
+  <text x="384" y="576" text-anchor="middle" font-size="12" fill="#0088AA">8.2</text>
+  <rect x="526" y="561" width="56" height="20" rx="3" fill="#00BFFF" fill-opacity="0.35"/>
+  <text x="554" y="575" text-anchor="middle" font-size="12" font-weight="700" fill="#00304A">2nd</text>
+
+  <!-- ── Row 7: 4017, 3rd rounding → green BG + dark green text (3 total) ── -->
+  <rect x="36" y="586" width="568" height="28" fill="#CCFF66"/>
+  <text x="60"  y="604" text-anchor="middle" font-size="11" fill="#4A7A00">7</text>
+  <text x="112" y="604" text-anchor="middle" font-size="13" font-weight="700" fill="#5A9900">4017</text>
+  <text x="210" y="604" text-anchor="middle" font-size="12" fill="#5A9900">Carter, J.</text>
+  <text x="316" y="604" text-anchor="middle" font-size="12" fill="#5A9900">USA</text>
+  <text x="384" y="604" text-anchor="middle" font-size="12" fill="#5A9900">8.2</text>
+  <rect x="526" y="589" width="56" height="20" rx="3" fill="#AAEE44" fill-opacity="0.5"/>
+  <text x="554" y="603" text-anchor="middle" font-size="12" font-weight="700" fill="#2A4A00">3rd</text>
+
+  <!-- ── Row 8: 2451, 2nd rounding → blue BG + dark blue text (2 total) ── -->
+  <rect x="36" y="614" width="568" height="28" fill="#66D9FF"/>
+  <text x="60"  y="632" text-anchor="middle" font-size="11" fill="#007090">8</text>
+  <text x="112" y="632" text-anchor="middle" font-size="13" font-weight="700" fill="#0088AA">2451</text>
+  <text x="210" y="632" text-anchor="middle" font-size="12" fill="#0088AA">Brooks, E.</text>
+  <text x="316" y="632" text-anchor="middle" font-size="12" fill="#0088AA">CAN</text>
+  <text x="384" y="632" text-anchor="middle" font-size="12" fill="#0088AA">7.5</text>
+  <rect x="526" y="617" width="56" height="20" rx="3" fill="#00BFFF" fill-opacity="0.35"/>
+  <text x="554" y="631" text-anchor="middle" font-size="12" font-weight="700" fill="#00304A">2nd</text>
+
+  <!-- bottom fade -->
+  <defs>
+    <linearGradient id="fadeDown" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="white" stop-opacity="0"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0.88"/>
+    </linearGradient>
+  </defs>
+  <rect x="36" y="614" width="568" height="28" fill="url(#fadeDown)"/>
+  <text x="320" y="659" text-anchor="middle" font-size="11" fill="#AEAEB2">⋯ continues as boats complete more laps ⋯</text>
+
+  <!-- footer -->
+  <text x="320" y="688" text-anchor="middle" font-size="10.5" fill="#AEAEB2">3198 has 1 rounding → black text. Rows 1–3 have white bg but coloured text: those boats appear again later.</text>
+  <text x="320" y="701" text-anchor="middle" font-size="10.5" fill="#AEAEB2">When row 7 (4017's 3rd) was entered, rows 1 and 5 retroactively switched from dark blue → dark green text.</text>
+
+</svg>
