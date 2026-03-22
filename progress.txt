@@ -1,3 +1,4 @@
 2026-03-22 | #2 | Project scaffolding & data models: pyproject.toml, src/waszp_gp_scorer/models.py (Competitor, GateRounding, FinishEntry, ScoredResult, FinishLineConfig, RaceSession), tests/test_models.py — all passing
 2026-03-22 | #3 | CSV loading & competitor model: src/waszp_gp_scorer/csv_loader.py (load_competitors, UnknownRigSizeWarning, LoadSummary), tests/fixtures/valid_fleet.csv (15-boat synthetic fixture), tests/test_csv_loader.py (24 tests) — all passing
 2026-03-22 | #4 | Session persistence (JSON save/resume): src/waszp_gp_scorer/session.py (save, load, AutoSaveSession, session_filename), tests/test_session.py (24 tests) — all passing
+2026-03-22 | #5 | Scorer engine FINISH_AT_GATE: src/waszp_gp_scorer/scorer.py (score, ExcessRoundingsWarning, NoRecordedFinishWarning, FinishOnlyWarning, LeadBoatViolationWarning), tests/test_scorer.py (54 tests, RMG Examples 1 & 2, all 5 sub-assertions) — all passing
