@@ -316,8 +316,11 @@ class TestOriginalFinishListRows:
     def test_competitor_data_filled_from_map(self) -> None:
         entries = [_finish_entry(1, "AUS1")]
         comp = _competitor(
-            sail_number="AUS1", country="AUS", name="Bob",
-            rig_size="8.2", division="Open",
+            sail_number="AUS1",
+            country="AUS",
+            name="Bob",
+            rig_size="8.2",
+            division="Open",
         )
         r = _result(
             sail_number="AUS1", rig_size="8.2", laps=3, finish_type=FinishType.STANDARD
