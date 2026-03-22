@@ -14,6 +14,15 @@ test("user can checkout with valid cart", async () => {
 });
 ```
 
+```python
+# GOOD: Tests observable behavior
+def test_user_can_checkout_with_valid_cart():
+    cart = create_cart()
+    cart.add(product)
+    result = checkout(cart, payment_method)
+    assert result.status == "confirmed"
+```
+
 Characteristics:
 
 - Tests behavior users/callers care about
@@ -33,6 +42,14 @@ test("checkout calls paymentService.process", async () => {
   await checkout(cart, payment);
   expect(mockPayment.process).toHaveBeenCalledWith(cart.total);
 });
+```
+
+```python
+# BAD: Tests implementation details
+def test_checkout_calls_payment_service_process(mocker):
+    mock_payment = mocker.patch("app.services.payment_service")
+    checkout(cart, payment)
+    mock_payment.process.assert_called_once_with(cart.total)
 ```
 
 Red flags:
@@ -58,4 +75,18 @@ test("createUser makes user retrievable", async () => {
   const retrieved = await getUser(user.id);
   expect(retrieved.name).toBe("Alice");
 });
+```
+
+```python
+# BAD: Bypasses interface to verify
+def test_create_user_saves_to_database(db_session):
+    create_user(name="Alice")
+    row = db_session.execute("SELECT * FROM users WHERE name = :n", {"n": "Alice"}).first()
+    assert row is not None
+
+# GOOD: Verifies through interface
+def test_create_user_makes_user_retrievable():
+    user = create_user(name="Alice")
+    retrieved = get_user(user.id)
+    assert retrieved.name == "Alice"
 ```

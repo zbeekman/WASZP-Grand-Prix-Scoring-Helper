@@ -34,6 +34,17 @@ function processPayment(order) {
 }
 ```
 
+```python
+# Easy to mock — dependency is a parameter (or use a default argument)
+def process_payment(order, payment_client):
+    return payment_client.charge(order.total)
+
+# Hard to mock — dependency is created internally
+def process_payment(order):
+    client = StripeClient(os.environ["STRIPE_KEY"])
+    return client.charge(order.total)
+```
+
 **2. Prefer SDK-style interfaces over generic fetchers**
 
 Create specific functions for each external operation instead of one generic function with conditional logic:
@@ -50,6 +61,18 @@ const api = {
 const api = {
   fetch: (endpoint, options) => fetch(endpoint, options),
 };
+```
+
+```python
+# GOOD: Each method is independently mockable
+class ApiClient:
+    def get_user(self, user_id: int) -> User: ...
+    def get_orders(self, user_id: int) -> list[Order]: ...
+    def create_order(self, data: dict) -> Order: ...
+
+# BAD: Mocking requires conditional logic inside the mock
+class ApiClient:
+    def fetch(self, endpoint: str, **kwargs): ...
 ```
 
 The SDK approach means:

@@ -14,6 +14,15 @@ Good interfaces make testing natural:
    }
    ```
 
+   ```python
+   # Testable
+   def process_order(order, payment_gateway): ...
+
+   # Hard to test
+   def process_order(order):
+       gateway = StripeGateway()
+   ```
+
 2. **Return results, don't produce side effects**
 
    ```typescript
@@ -24,6 +33,15 @@ Good interfaces make testing natural:
    function applyDiscount(cart): void {
      cart.total -= discount;
    }
+   ```
+
+   ```python
+   # Testable — pure function, returns a value
+   def calculate_discount(cart: Cart) -> Discount: ...
+
+   # Hard to test — mutates input in place
+   def apply_discount(cart: Cart) -> None:
+       cart.total -= discount
    ```
 
 3. **Small surface area**
