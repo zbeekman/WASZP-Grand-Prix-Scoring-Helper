@@ -292,6 +292,59 @@ class AutoSaveSession:
         self._session.competitors = competitors
         self._trigger_save()
 
+    def remove_gate_rounding(self, index: int) -> None:
+        """Remove gate rounding at 0-based *index*, renumber, and auto-save.
+
+        Adjusts ``finish_window_marker_position`` when the deleted entry is
+        within the pre-window zone.
+
+        Args:
+            index: 0-based index of the rounding to remove. No-op if out of range.
+        """
+        roundings = self._session.gate_roundings
+        if not (0 <= index < len(roundings)):
+            return
+        roundings.pop(index)
+        for i, r in enumerate(roundings):
+            r.position = i + 1
+        marker = self._session.finish_window_marker_position
+        if marker is not None and index <= marker:
+            self._session.finish_window_marker_position = marker - 1
+        self._trigger_save()
+
+    def insert_gate_rounding(self, index: int, sail_number: str) -> None:
+        """Insert a gate rounding before 0-based *index*, renumber, and auto-save.
+
+        Adjusts ``finish_window_marker_position`` when the insertion is within
+        the pre-window zone.
+
+        Args:
+            index: 0-based index to insert before.  Clamped to valid range.
+            sail_number: Sail number for the new rounding entry.
+        """
+        roundings = self._session.gate_roundings
+        clamped = max(0, min(index, len(roundings)))
+        new_rounding = GateRounding(position=clamped + 1, sail_number=sail_number)
+        roundings.insert(clamped, new_rounding)
+        for i, r in enumerate(roundings):
+            r.position = i + 1
+        marker = self._session.finish_window_marker_position
+        if marker is not None and clamped <= marker:
+            self._session.finish_window_marker_position = marker + 1
+        self._trigger_save()
+
+    def replace_gate_rounding_sail(self, index: int, sail_number: str) -> None:
+        """Replace the sail number at 0-based *index* and auto-save.
+
+        Args:
+            index: 0-based index of the rounding to edit.  No-op if out of range.
+            sail_number: The replacement sail number.
+        """
+        roundings = self._session.gate_roundings
+        if 0 <= index < len(roundings):
+            roundings[index].sail_number = sail_number
+            self._trigger_save()
+
     def update_metadata(
         self,
         *,
