@@ -22,6 +22,7 @@ from waszp_gp_scorer.session import AutoSaveSession, load
 from waszp_gp_scorer.phases.setup import SetupPhase
 from waszp_gp_scorer.phases.data_entry import GateRoundingPhase
 from waszp_gp_scorer.phases.finish_entry import FinishListPhase
+from waszp_gp_scorer.phases.scoring import ScoringPhase
 
 # ---------------------------------------------------------------------------
 # Root window base: use tkinterdnd2 when available for platform DnD support.
@@ -110,10 +111,12 @@ class App(_DND_ROOT):  # type: ignore[misc]
         )
         self._gate_phase = GateRoundingPhase(self._content)
         self._finish_phase = FinishListPhase(self._content)
+        self._scoring_phase = ScoringPhase(self._content)
         self._phase_frames: dict[str, ttk.Frame] = {
             "setup": self._setup_phase,
             "gate_rounding": self._gate_phase,
             "finish": self._finish_phase,
+            "scoring": self._scoring_phase,
         }
 
     # ------------------------------------------------------------------
@@ -130,6 +133,7 @@ class App(_DND_ROOT):  # type: ignore[misc]
         self._has_unexported_results = False
         self._gate_phase.set_session(auto_save)
         self._finish_phase.set_session(auto_save)
+        self._scoring_phase.set_session(auto_save)
 
     def _try_resume_session(self) -> None:
         """Offer to resume the most recent session file if one exists."""
@@ -156,6 +160,7 @@ class App(_DND_ROOT):  # type: ignore[misc]
         self._setup_phase.load_session(auto_save)
         self._gate_phase.set_session(auto_save)
         self._finish_phase.set_session(auto_save)
+        self._scoring_phase.set_session(auto_save)
 
     # ------------------------------------------------------------------
     # Phase navigation
@@ -172,6 +177,10 @@ class App(_DND_ROOT):  # type: ignore[misc]
         self._phase_label.configure(
             text=self.PHASE_TITLES.get(phase_name, phase_name.replace("_", " ").title())
         )
+
+        # Trigger scoring recalculation when navigating to the scoring phase.
+        if phase_name == "scoring":
+            self._scoring_phase.refresh()
 
         # Hide all phase frames and show the current one.
         for child in self._content.winfo_children():
