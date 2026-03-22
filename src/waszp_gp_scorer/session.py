@@ -20,6 +20,9 @@ from waszp_gp_scorer.models import (
     RaceSession,
 )
 
+# Sentinel to distinguish "not provided" from None for optional fields.
+_UNSET: object = object()
+
 SCHEMA_VERSION: int = 1
 _DEFAULT_LAP_COUNTING_LOCATION = "Leeward gate (mark 2p)"
 
@@ -278,4 +281,62 @@ class AutoSaveSession:
             sail_number: The sail number to remove.
         """
         self._session.green_fleet.discard(sail_number)
+        self._trigger_save()
+
+    def set_competitors(self, competitors: list[Competitor]) -> None:
+        """Replace the competitor list and auto-save.
+
+        Args:
+            competitors: New list of competitors (replaces any existing list).
+        """
+        self._session.competitors = competitors
+        self._trigger_save()
+
+    def update_metadata(
+        self,
+        *,
+        event_name: Optional[str] = None,
+        race_number: Optional[int] = None,
+        race_date: Optional[str] = None,
+        start_time: object = _UNSET,
+        num_laps: Optional[int] = None,
+        course_type: Optional[str] = None,
+        finish_line_config: Optional[FinishLineConfig] = None,
+        lap_counting_location: Optional[str] = None,
+    ) -> None:
+        """Update session metadata fields and auto-save.
+
+        Only keyword arguments that differ from their sentinel value are
+        applied, so callers may update a single field without resetting others.
+        Pass ``start_time=None`` explicitly to clear the start time.
+
+        Args:
+            event_name: Human-readable event name.
+            race_number: Race number within the event.
+            race_date: ISO 8601 date string.
+            start_time: Approximate start time string, or ``None`` to clear.
+                Omit the argument entirely to leave the existing value unchanged.
+            num_laps: Number of required laps.
+            course_type: Course type string.
+            finish_line_config: Finishing line configuration.
+            lap_counting_location: Lap counting location description.
+        """
+        if event_name is not None:
+            self._session.event_name = event_name
+        if race_number is not None:
+            self._session.race_number = race_number
+        if race_date is not None:
+            self._session.race_date = race_date
+        if start_time is not _UNSET:
+            self._session.start_time = (
+                start_time if isinstance(start_time, str) else None
+            )
+        if num_laps is not None:
+            self._session.num_laps = num_laps
+        if course_type is not None:
+            self._session.course_type = course_type
+        if finish_line_config is not None:
+            self._session.finish_line_config = finish_line_config
+        if lap_counting_location is not None:
+            self._session.lap_counting_location = lap_counting_location
         self._trigger_save()
