@@ -1,0 +1,51 @@
+# Ralph loop logs (per-iteration output)
+ralph-logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# pip-tools
+requirements.txt
+requirements*.txt
+!requirements-base.txt
+
+# mypy
+.mypy_cache/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PyInstaller
+*.spec
+dist/
+build/
+
+# macOS
+.DS_Store
+*.dmg
+
+# Windows
+*.exe
+*.msi
+
+# IDE
+.idea/
+.vscode/
+*.swp

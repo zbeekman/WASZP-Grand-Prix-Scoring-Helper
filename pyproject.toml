@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "waszp-gp-scorer"
+version = "0.1.0"
+description = "WASZP Grand Prix finish race scorer"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Izaak Beekman" }]
+dependencies = [
+    "attrs>=23.0",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "openpyxl>=3.1",
+    "tkinterdnd2>=0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "black>=24.0",
+    "flake8>=7.0",
+    "mypy>=1.10",
+    "pandas-stubs>=2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
