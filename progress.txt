@@ -1,0 +1,1 @@
+2026-03-22 | #2 | Project scaffolding & data models: pyproject.toml, src/waszp_gp_scorer/models.py (Competitor, GateRounding, FinishEntry, ScoredResult, FinishLineConfig, RaceSession), tests/test_models.py — all passing
