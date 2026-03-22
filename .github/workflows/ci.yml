@@ -7,6 +7,13 @@ on:
     branches: [main]
 
 jobs:
+  actionlint:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: raven-actions/actionlint@v2
+
   test:
     name: "Python ${{ matrix.python-version }}"
     runs-on: ubuntu-latest
@@ -29,14 +36,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Lint (black)
-        run: uv run black --check .
+      - name: Install actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          actionlint-only-install: true
 
-      - name: Lint (flake8)
-        run: uv run flake8 src/ tests/
-
-      - name: Type check (mypy)
-        run: uv run mypy src/
-
-      - name: Tests (pytest)
+      - name: Tests (pytest — includes lint, type-check, and actionlint)
         run: uv run pytest --cov=waszp_gp_scorer --cov-report=term-missing
